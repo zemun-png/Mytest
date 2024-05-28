@@ -1,0 +1,39 @@
+pipeline {
+    agent any
+    stages {
+        stage("Build and Push Image To Nexus") {
+            agent {
+                label 'Buildserver'
+            }
+            steps {
+                withCredentials([gitUsernamePassword(credentialsId: 'GitPersonalToken', gitToolName: 'git-tool')]) {
+                    sh 'git checkout ${BRANCH_NAME}'
+                    sh 'git pull'
+                }
+                script {
+                    tag = sh(returnStdout: true, script: "git tag --contains").trim()
+                    if (tag != "") {
+                        if ( tag.startsWith('v')) {
+                            version = tag.minus('v')
+                            branch = env.BRANCH_NAME.toLowerCase()
+                            name = env.JOB_NAME.split('/')
+                            name = name[0].toLowerCase()
+                            sh "docker build . -t ${env.NEXUS_URL}/${branch}.${name}.back:${version} --build-arg COMMIT_ID=${GIT_COMMIT} --build-arg BUILD_ID=${BUILD_TAG}"
+                            sh "docker push ${env.NEXUS_URL}/${branch}.${name}.back:${version}"
+                            sh "docker save -o /home/images/${branch}_${name}_back_${version}.tar ${env.NEXUS_URL}/${branch}.${name}.back:${version}"
+                        }
+                    }
+                    if (tag == "") {
+                        error("Currently we don't have a tag !")
+                    }
+                }
+            }
+            post{
+                failure {
+                    emailext attachLog: true, body: '''$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:Check console output at $BUILD_URL to view the results build fail.''', subject: 'Pipline failed', to: 'd.nabiyan@aranuma.com'
+                }
+            }
+          
+        }
+    }
+}

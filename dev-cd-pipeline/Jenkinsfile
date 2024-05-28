@@ -1,0 +1,19 @@
+pipeline {
+    agent any
+    parameters {
+        string(name: "IMAGE_TAG", defaultValue: "latest", trim: true, description: "docker image version")
+    }
+    stages {    
+        stage ("Deploy Service") {
+            agent {
+                label "$BRANCH_NAME"
+            }
+            steps {
+                script {
+                    sh "docker-compose -f docker-compose.${BRANCH_NAME}.yml pull"
+                    sh "docker-compose -f docker-compose.${BRANCH_NAME}.yml up -d --force-recreate"
+                }
+            }
+        }
+    }
+}

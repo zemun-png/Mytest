@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+    stages {
+        stage('SonarQube Analysis') { 
+            agent{
+                label 'Development'
+            }
+            steps{               
+                sh 'dotnet sonarscanner begin /k:"backend_ara.smarthse_AYfWmQmp1fE4SuNrFZYV" /d:sonar.host.url="http://172.16.18.4:9000"  /d:sonar.login="sqp_93010eed505464a39f7824e0253f5d61c69f9b67"'   
+                sh 'dotnet build'
+                sh 'dotnet sonarscanner end /d:sonar.login="sqp_93010eed505464a39f7824e0253f5d61c69f9b67"'
+            }
+        }
+        stage("Build Image") {
+            agent {
+                label 'Buildserver'
+            }
+            steps {
+                script {
+                    branch = env.BRANCH_NAME.toLowerCase()
+                    name = env.JOB_NAME.split('/')
+                    name = name[0].toLowerCase()
+                    sh "docker build . -t ${branch}.${name}.back:latest --build-arg COMMIT_ID=${GIT_COMMIT} --build-arg BUILD_ID=${BUILD_TAG}"
+                }
+            }
+            post{
+                failure {
+                    emailext attachLog: true, body: '''$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:Check console output at $BUILD_URL to view the results build fail.''', subject: 'Pipline failed', to: 'd.nabiyan@aranuma.com'
+                }
+            }
+        }
+        stage("Push Image To Nexus") {
+            agent {
+                label 'Buildserver'
+            }
+            steps {
+                script {
+                    tag = sh(returnStdout: true, script: "git tag --contains").trim()
+                    if (tag != "") {
+                        if ( tag.startsWith('v')) {
+                            version = tag.minus('v')
+                            branch = env.BRANCH_NAME.toLowerCase()
+                            name = env.JOB_NAME.split('/')
+                            name = name[0].toLowerCase()
+                            sh "docker tag ${branch}.${name}.back:latest ${env.NEXUS_URL}/${branch}.${name}.back:${version}"
+                            sh "docker push ${env.NEXUS_URL}/${branch}.${name}.back:${version}"
+                            JOB_ADDRESS = "Smarthse/smarthse_back_cd/${env.BRANCH_NAME}"
+                            build job: JOB_ADDRESS, parameters: [string(name: 'IMAGE_TAG', value: "$version")]
+                        }
+                    }
+                    if (tag == "") {
+                        sh "docker tag ${branch}.${name}.back:latest ${env.NEXUS_URL}/${branch}.${name}.back:latest"
+                        sh "docker push ${env.NEXUS_URL}/${branch}.${name}.back:latest"
+                        JOB_ADDRESS = "Smarthse/smarthse_back_cd/${env.BRANCH_NAME}"
+                        build job: JOB_ADDRESS, parameters: [string(name: 'IMAGE_TAG', value: "latest")]
+                    }
+                }
+            }
+            post{
+                failure {
+                    emailext attachLog: true, body: '''$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:Check console output at $BUILD_URL to view the results build fail.''', subject: 'Pipline failed', to: 'd.nabiyan@aranuma.com'
+                }
+            }
+          
+        }
+    }
+}
