@@ -1,0 +1,9 @@
+we have two command in Entity/Personnels/Commands/Create
+PersonnelListCreateCommand Is Comment And Dont Need To Remove It cause this method use for convert data from excel to sql
+and we need it when we have new ecxel file for convert
+DONT REMOVE THIS METHOD !!!!!!
+AND 
+DONT REMOVE Ara.SmartHSE.Infrastructure.ConvertExcel
+
+
+ADD TO Migration For New Entity

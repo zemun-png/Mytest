@@ -1,0 +1,23 @@
+version: '3.4'
+
+services:
+  hse.backend:
+    image: nexus.aranuma.com:8889/development.smarthse.back:latest
+    container_name: development_smarthse_backend
+    restart: unless-stopped
+    hostname: dev_smarthse
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - TZ=Asia/Tehran
+    ports:
+      - 5761:5000
+    volumes:
+      - /var/cdn/development/Facedetection:/app/Facedetection
+      - /var/cdn/development/Smarthse:/app/Smarthse
+      - /var/containers/BackHse/data/mongodata:/app/mongodata
+      - /var/containers/BackHse/log:/Log
+      - /var/containers/BackHse/conf:/app/Config
+      - /var/containers/BackHse/cert/MqttCert:/app/MqttCert
+      - /var/containers/BackHse/cert/MongoCert:/app/MongoCert
+
+

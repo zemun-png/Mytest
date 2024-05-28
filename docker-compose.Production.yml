@@ -1,0 +1,20 @@
+version: '3.4'
+
+services:
+  hse.backend:
+    image: smarthse.back:1.0.0.0
+    container_name: smarthse_backend
+    restart: unless-stopped
+    hostname: smarthse
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Prod
+      - TZ=Asia/Tehran
+    ports:
+      - 5761:5000
+    volumes:
+      - /var/cdn/Facedetection:/app/Facedetection
+      - /var/cdn/Smarthse:/app/Smarthse
+      - /var/containers/BackHse/data/mongodata:/app/mongodata
+      - /var/containers/BackHse/log:/Log
+      - /var/containers/BackHse/conf:/app/Config
+
